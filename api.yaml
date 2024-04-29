@@ -1,0 +1,197 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: api
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local-storage
+  namespace: api
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: storage-claim
+  namespace: api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: local-storage
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: storage-volume
+  namespace: api
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  hostPath:
+    path: /data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: api
+spec:
+  selector:
+    matchLabels:
+      app: api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api-server
+          ports:
+            - containerPort: 8000
+          image: python:3.11
+          env:
+            - name: RABBITMQ_HOST
+              value: rabbitmq.rabbitmq.svc.cluster.local
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USER
+              value: "async-api"
+            - name: RABBITMQ_PASS
+              value: "async-api"
+            - name: RABBITMQ_VHOST
+              value: "/api"
+          volumeMounts:
+            - name: storage-volume
+              mountPath: /mnt
+          resources:
+            limits:
+                memory: "128Mi"
+                cpu: "500m"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              python3 -m pip install -r /mnt/api/requirements.txt
+              cd /mnt/api
+              uvicorn main:app --reload --port 8000 --host 0.0.0.0
+      volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: storage-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-dispatcher-queue
+  namespace: api
+spec:
+  selector:
+    matchLabels:
+      app: consumer-dispatcher-queue
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: consumer-dispatcher-queue
+    spec:
+      containers:
+      - name: consumer-dispatcher-queue
+        image: python:3.11
+        command: ["/bin/sh", "-c"]
+        env:
+          - name: RABBITMQ_HOST
+            value: rabbitmq.rabbitmq.svc.cluster.local
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_USER
+            value: "async-api"
+          - name: RABBITMQ_PASS
+            value: "async-api"
+          - name: RABBITMQ_VHOST
+            value: "/api"
+        args:
+          - |
+            python3 -m pip install -r /mnt/api/requirements.txt
+            cd /mnt/api/queues
+            python3 ./dispatcher_queue.py
+        volumeMounts:
+          - name: storage-volume
+            mountPath: /mnt
+        resources:
+          limits:
+              memory: "128Mi"
+              cpu: "500m"
+      volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: storage-claim
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-create-response-queue
+  namespace: api
+spec:
+  selector:
+    matchLabels:
+      app: consumer-create-response-queue
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: consumer-create-response-queue
+    spec:
+      containers:
+      - name: consumer-create-response-queue
+        image: python:3.11
+        command: ["/bin/sh", "-c"]
+        env:
+          - name: RABBITMQ_HOST
+            value: rabbitmq.rabbitmq.svc.cluster.local
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_USER
+            value: "async-api"
+          - name: RABBITMQ_PASS
+            value: "async-api"
+          - name: RABBITMQ_VHOST
+            value: "/api"
+        args:
+          - |
+            python3 -m pip install -r /mnt/api/requirements.txt
+            cd /mnt/api/queues
+            python3 ./create_response_queue.py
+        volumeMounts:
+          - name: storage-volume
+            mountPath: /mnt
+        resources:
+          limits:
+              memory: "128Mi"
+              cpu: "500m"
+      volumes:
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: storage-claim
+---
+# Expose the API server to the outside world
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: api
+spec:
+  selector:
+    app: api
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+

@@ -1,0 +1,56 @@
+auth:
+  password: "changeme"
+  username: "admin"
+extraSecrets:
+  load-definition:
+    load_definition.json: |
+      {
+        "users": [
+          {
+            "name": "{{ .Values.auth.username }}",
+            "password": "{{ .Values.auth.password }}",
+            "tags": "administrator"
+          },
+          {
+            "name": "async-api",
+            "password": "async-api",
+            "tags": "async-api"
+          }
+        ],
+        "vhosts": [
+          {
+            "name": "/"
+          },
+          {
+            "name": "/api"
+          }
+        ],
+        "permissions": [
+          {
+            "user": "{{ .Values.auth.username }}",
+            "vhost": "/",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+          },
+          {
+            "user": "{{ .Values.auth.username }}",
+            "vhost": "/api",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+          },
+          {
+            "user": "async-api",
+            "vhost": "/api",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+          }
+        ]
+      }
+loadDefinition:
+  enabled: true
+  existingSecret: load-definition
+extraConfiguration: |
+  load_definitions = /app/load_definition.json
