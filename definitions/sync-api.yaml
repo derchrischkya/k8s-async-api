@@ -1,0 +1,114 @@
+penapi: 3.0.0
+info:
+  title: SyncAPI
+  description: API for sync-request by client
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:30000
+    description: Exposed on NodePort 30000 for testing 0.0.0.0
+paths:
+  /ping:
+    post:
+      summary: Send message to server
+      description: This sends a simple event to queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Hello, World!"
+      responses:
+        '202':    # status code
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-04-30 07:09:17+0000"
+                  redirect_uri:
+                    type: string
+                    example: "/state/c912b72e-141e-443b-9ddd-46e3c0c669c7"
+                  msg:
+                    type: string
+                    example: "Waiting for response message from the server may take some time, grab a coffee and relax"
+                  is_async:
+                    type: boolean
+                    example: true
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Not Found"
+        '500':   # status code
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Error sending message: {body.message}"
+  /state/{uuid}:
+    get:
+      summary: Get state of message
+      description: This endpoint is used to get the state of the message
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: The UUID of the message
+          schema:
+            type: string
+            example: "c912b72e-141e-443b-9ddd-46e3c0c669c7"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-04-30 07:09:17+0000"
+                  message:
+                    type: string
+                    example: "pong"
+                  state:
+                    type: string
+                    example: "Received"
+        '404':
+          description: Not Found
+          content:
+            application/plaintext:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: null
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Error getting message state: {uuid}"

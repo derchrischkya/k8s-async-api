@@ -181,11 +181,11 @@ spec:
           persistentVolumeClaim:
             claimName: storage-claim
 ---
-# Expose the API server to the outside world
+# Expose the API server to the outside world via NodePort
 apiVersion: v1
 kind: Service
 metadata:
-  name: api
+  name: api-server
   namespace: api
 spec:
   selector:
@@ -194,4 +194,6 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
+      nodePort: 30000
+  type: NodePort
 

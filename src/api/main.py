@@ -85,10 +85,12 @@ async def get_state_from_db(id: str, response: Response):
         
         log.info(f"Message: {message}")
         completed = True
-        msg = "The request is completed"
+        msg = message[0]
+        
         if message[1] == 0:
             completed = False
             msg = "The request is still in progress"
+            
         return CustomResponse(msg=msg, completed=completed)
     except ValueError as ex:
         log.error(f"Error getting state for {id} - {ex}")
