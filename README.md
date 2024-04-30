@@ -3,12 +3,13 @@ This is a simple project to test async-api with rabbitmq.
 
 ## How to run
 - `make start`
+- Check `definitions` folder to see the swagger files of async-api/sync-api
 
 ## How to test
 
 - Run the following curl to create a new message
 ```bash
-curl --location '127.0.0.1:10000/ping' \
+curl --location '127.0.0.1:30000/ping' \
 --header 'Content-Type: application/json' \
 --data '{
     "message": "test"
@@ -26,7 +27,7 @@ curl --location '127.0.0.1:10000/ping' \
 
 - Check state of the processed data
 ```bash
-curl --location '127.0.0.1:10000/state/0ea6f343-ea95-489f-9a99-18b099039f57'
+curl --location '127.0.0.1:30000/state/0ea6f343-ea95-489f-9a99-18b099039f57'
 ```
 
 ```json
@@ -39,7 +40,7 @@ curl --location '127.0.0.1:10000/state/0ea6f343-ea95-489f-9a99-18b099039f57'
 
 - Run 10 seconds later
 ```bash
-curl --location '127.0.0.1:10000/state/0ea6f343-ea95-489f-9a99-18b099039f57'
+curl --location '127.0.0.1:30000/state/0ea6f343-ea95-489f-9a99-18b099039f57'
 ```
 
 ```json
