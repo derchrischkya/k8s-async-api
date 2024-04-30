@@ -1,0 +1,75 @@
+asyncapi: 3.0.0
+info:
+  title: Asyncronous api with rabbitmq 
+  version: 1.0.0
+  description: |-
+    The async api is used to simple run some event-driven api which has some delay between the final execution.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+defaultContentType: application/json
+servers:
+  rabbitmq:
+    host: rabbitmq.rabbitmq.svc.cluster.local:5672
+    protocol: amqp
+    description: Test broker secured with basic auth
+    security:
+      - $ref: "#/components/securitySchemes/user-password"
+channels:
+  dispatch-queue:
+    address: dispatch-queue
+    messages:
+      dispatch-queue-message:
+        name: dispatch-queue
+        payload:
+          type: object
+          properties:
+            correlationId:
+              type: string
+            message:
+              type: string
+  response-request-queue:
+    messages:
+      response-request-queue-message:
+        name: response-request-queue
+        payload:
+          type: object
+          properties:
+            correlationId:
+              type: string
+            message:
+              type: string
+  create-response-queue:
+    messages:
+      create-response-queue-message:
+        name: create-response-queue
+        payload:
+          type: object
+          properties:
+            correlationId:
+              type: string
+            message:
+              type: string
+operations:
+  on-api-call:
+    action: 'send'
+    summary: The API-Webserver publish message on the dispatch queue and receives callback
+    channel: 
+      $ref: '#/channels/dispatch-queue'
+  on-dispatch-queue:
+    action: 'send'
+    summary: Inform sending client about performing of API
+    channel: 
+      $ref: '#/channels/dispatch-queue'
+    reply: 
+      channel:
+        $ref: '#/channels/response-request-queue'
+  on-create-response-queue:
+    action: receive
+    summary: Consumes events in queue and executes script action finally stores state in persist database
+    channel:
+      $ref: '#/channels/create-response-queue'
+components:
+  securitySchemes:
+    user-password:
+      type: userPassword
